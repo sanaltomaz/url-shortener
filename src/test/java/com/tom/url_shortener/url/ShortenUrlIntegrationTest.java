@@ -68,7 +68,7 @@ class ShortenUrlIntegrationTest {
     @DisplayName("Deve lidar com requisicoes concorrentes para a mesma URL sem falhas de integridade")
     void shouldHandleConcurrentRequestsForSameUrlSafely() throws InterruptedException, ExecutionException {
         String originalUrl = "https://concurrent-test.com";
-        int threadCount = 10;
+        int threadCount = 20;
         CountDownLatch startLatch = new CountDownLatch(1);
         List<Future<ShortenUrlResponse>> futures = new ArrayList<>();
 
@@ -80,7 +80,7 @@ class ShortenUrlIntegrationTest {
                 }));
             }
 
-            startLatch.countDown(); // Libera todas as 10 threads concorrentemente
+            startLatch.countDown(); // Libera todas as threads simultaneamente
 
             Set<String> shortCodes = new HashSet<>();
             for (Future<ShortenUrlResponse> future : futures) {
@@ -90,9 +90,13 @@ class ShortenUrlIntegrationTest {
                 shortCodes.add(response.getShortCode());
             }
 
-            // Todas as 10 threads concorrentes devem ter convergido para o mesmo shortCode
+            // Todas as threads concorrentes devem ter convergido para exatamente o mesmo shortCode
             assertThat(shortCodes).hasSize(1);
             assertThat(springDataUrlRepository.count()).isEqualTo(1);
+
+            var persisted = springDataUrlRepository.findByOriginalUrl(originalUrl);
+            assertThat(persisted).isPresent();
+            assertThat(persisted.get().getShortCode()).isEqualTo(shortCodes.iterator().next());
         }
     }
 }

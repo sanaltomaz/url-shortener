@@ -10,15 +10,18 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.Optional;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(UrlController.class)
 class UrlControllerTest {
@@ -113,5 +116,29 @@ class UrlControllerTest {
                 .andExpect(jsonPath("$.title").value("Bad Request"))
                 .andExpect(jsonPath("$.status").value(400))
                 .andExpect(jsonPath("$.errors.url").isNotEmpty());
+    }
+
+    @Test
+    @DisplayName("Deve retornar 302 Found com Header Location quando o shortCode existir")
+    void shouldRedirectWhenShortCodeExists() throws Exception {
+        String shortCode = "abc1234567";
+        String originalUrl = "https://example.com/target-page";
+
+        when(getOriginalUrlUseCase.execute(shortCode)).thenReturn(Optional.of(originalUrl));
+
+        mockMvc.perform(get("/{shortCode}", shortCode))
+                .andExpect(status().isFound())
+                .andExpect(header().string(HttpHeaders.LOCATION, originalUrl));
+    }
+
+    @Test
+    @DisplayName("Deve retornar 404 Not Found quando o shortCode nao existir")
+    void shouldReturn404WhenShortCodeDoesNotExist() throws Exception {
+        String shortCode = "unknownCode";
+
+        when(getOriginalUrlUseCase.execute(shortCode)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/{shortCode}", shortCode))
+                .andExpect(status().isNotFound());
     }
 }
