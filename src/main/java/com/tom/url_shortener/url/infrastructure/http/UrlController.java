@@ -1,17 +1,58 @@
 package com.tom.url_shortener.url.infrastructure.http;
 
+import com.tom.url_shortener.url.application.dto.ShortenUrlCommand;
+import com.tom.url_shortener.url.application.dto.ShortenUrlResponse;
+import com.tom.url_shortener.url.application.usecase.GetOriginalUrlUseCase;
+import com.tom.url_shortener.url.application.usecase.ShortenUrlUseCase;
+import com.tom.url_shortener.url.infrastructure.http.dto.ShortenUrlRequest;
+import com.tom.url_shortener.url.infrastructure.http.dto.ShortenUrlResponseDto;
+import jakarta.servlet.http.HttpServletRequest;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+
+import java.net.URI;
 
 @RestController
-@RequestMapping("/api/urls")
+@RequiredArgsConstructor
 public class UrlController {
 
-    @PostMapping
-    public ResponseEntity<String> post(@RequestBody String url){
-        return ResponseEntity.ok(url);
+    private final ShortenUrlUseCase shortenUrlUseCase;
+    private final GetOriginalUrlUseCase getOriginalUrlUseCase;
+
+    @PostMapping("/api/urls")
+    public ResponseEntity<ShortenUrlResponseDto> shortenUrl(
+            @RequestBody ShortenUrlRequest request,
+            HttpServletRequest servletRequest) {
+
+        ShortenUrlCommand command = new ShortenUrlCommand(request.getUrl());
+        ShortenUrlResponse response = shortenUrlUseCase.execute(command);
+
+        String baseUrl = ServletUriComponentsBuilder.fromRequestUri(servletRequest)
+                .replacePath(null)
+                .build()
+                .toUriString();
+
+        String fullShortUrl = baseUrl + "/" + response.getShortCode();
+
+        ShortenUrlResponseDto responseDto = ShortenUrlResponseDto.builder()
+                .originalUrl(response.getOriginalUrl())
+                .shortCode(response.getShortCode())
+                .shortUrl(fullShortUrl)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
+    }
+
+    @GetMapping("/{shortCode}")
+    public ResponseEntity<Void> redirect(@PathVariable String shortCode) {
+        return getOriginalUrlUseCase.execute(shortCode)
+                .map(originalUrl -> ResponseEntity
+                        .status(HttpStatus.FOUND) // HTTP 302 Redirect
+                        .location(URI.create(originalUrl))
+                        .<Void>build())
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }
