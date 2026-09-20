@@ -2,6 +2,7 @@ package com.tom.url_shortener.url.application.usecase;
 
 import com.tom.url_shortener.url.application.dto.ShortenUrlCommand;
 import com.tom.url_shortener.url.application.dto.ShortenUrlResponse;
+import com.tom.url_shortener.url.domain.IdGenerator;
 import com.tom.url_shortener.url.domain.Url;
 import com.tom.url_shortener.url.domain.UrlRepository;
 import com.tom.url_shortener.url.infrastructure.utils.Base62;
@@ -14,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ShortenUrlUseCase {
 
     private final UrlRepository urlRepository;
+    private final IdGenerator idGenerator;
 
     @Transactional
     public ShortenUrlResponse execute(ShortenUrlCommand command) {
@@ -26,20 +28,18 @@ public class ShortenUrlUseCase {
     }
 
     private ShortenUrlResponse createNewUrl(String originalUrl) {
-        // 1. Salva inicialmente para gerar o ID sequencial no banco
+        long id = idGenerator.nextId();
+        String shortCode = Base62.encode(id);
+
         Url url = Url.builder()
+                .id(id)
                 .originalUrl(originalUrl)
+                .shortCode(shortCode)
                 .build();
+
         Url savedUrl = urlRepository.save(url);
 
-        // 2. Codifica o ID com Base62 para gerar o shortCode
-        String shortCode = Base62.encode(savedUrl.getId());
-        savedUrl.setShortCode(shortCode);
-
-        // 3. Persiste a URL atualizada com o shortCode gerado
-        Url updatedUrl = urlRepository.save(savedUrl);
-
-        return toResponse(updatedUrl);
+        return toResponse(savedUrl);
     }
 
     private ShortenUrlResponse toResponse(Url url) {
