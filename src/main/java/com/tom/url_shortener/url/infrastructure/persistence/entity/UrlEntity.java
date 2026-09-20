@@ -18,7 +18,7 @@ public class UrlEntity implements Persistable<Long> {
     @Id
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true, length = 2048)
     private String originalUrl;
 
     @Column(nullable = false, unique = true)

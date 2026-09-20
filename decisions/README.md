@@ -11,6 +11,7 @@ Este diretório documenta a evolução técnica, padrões arquiteturais e decis�
 | [**v3**](./v3-persistencia-relacional-e-integridade.md) | Persistência Relacional e Mapeamento de Entidades | **Aceito** | 2026-09-20 |
 | [**v4**](./v4-geracao-distribuida-de-ids-tsid-pre-persistencia.md) | Geração de ID Distribuído Pré-Persistência (TSID) e Eliminação do Duplo Round-Trip | **Aceito** | 2026-09-20 |
 | [**v5**](./v5-validacao-de-input-e-rfc7807.md) | Validação de Entrada de Dados e Padronização de Erros com RFC 7807 | **Aceito** | 2026-09-20 |
+| [**v6**](./v6-resiliencia-a-condicao-de-corrida-url-duplicada.md) | Resiliência a Condições de Corrida em URLs Duplicadas | **Aceito** | 2026-09-20 |
 
 ---
 

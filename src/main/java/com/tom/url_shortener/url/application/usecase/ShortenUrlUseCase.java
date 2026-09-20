@@ -7,9 +7,11 @@ import com.tom.url_shortener.url.domain.Url;
 import com.tom.url_shortener.url.domain.UrlRepository;
 import com.tom.url_shortener.url.infrastructure.utils.Base62;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ShortenUrlUseCase {
@@ -17,7 +19,6 @@ public class ShortenUrlUseCase {
     private final UrlRepository urlRepository;
     private final IdGenerator idGenerator;
 
-    @Transactional
     public ShortenUrlResponse execute(ShortenUrlCommand command) {
         String originalUrl = command.getOriginalUrl();
 
@@ -37,9 +38,17 @@ public class ShortenUrlUseCase {
                 .shortCode(shortCode)
                 .build();
 
-        Url savedUrl = urlRepository.save(url);
-
-        return toResponse(savedUrl);
+        try {
+            Url savedUrl = urlRepository.save(url);
+            return toResponse(savedUrl);
+        } catch (DataIntegrityViolationException ex) {
+            // Em caso de concorrência onde outra requisição inseriu a mesma URL em paralelo,
+            // recuperamos a URL já persistida garantindo a idempotência.
+            log.info("Concorrência detectada para a URL: {}. Recuperando registro existente.", originalUrl);
+            return urlRepository.findByOriginalUrl(originalUrl)
+                    .map(this::toResponse)
+                    .orElseThrow(() -> ex);
+        }
     }
 
     private ShortenUrlResponse toResponse(Url url) {

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.Optional;
 
@@ -89,5 +90,38 @@ class ShortenUrlUseCaseTest {
                 url.getOriginalUrl().equals(originalUrl) &&
                 url.getShortCode().equals(expectedCode)
         ));
+    }
+
+    @Test
+    @DisplayName("Deve recuperar registro existente quando ocorrer DataIntegrityViolationException por condicao de corrida")
+    void shouldRecoverExistingUrlWhenDataIntegrityViolationOccursDueToRaceCondition() {
+        String originalUrl = "https://concurrent.com";
+        ShortenUrlCommand command = new ShortenUrlCommand(originalUrl);
+        long generatedId = 99L;
+
+        Url existingUrlSavedByOtherThread = Url.builder()
+                .id(88L)
+                .originalUrl(originalUrl)
+                .shortCode("otherThreadCode")
+                .build();
+
+        // 1ª busca: não encontra nada
+        // 2ª busca (após conflito de chave única): encontra a URL que outra thread salvou
+        when(urlRepository.findByOriginalUrl(originalUrl))
+                .thenReturn(Optional.empty())
+                .thenReturn(Optional.of(existingUrlSavedByOtherThread));
+
+        when(idGenerator.nextId()).thenReturn(generatedId);
+        when(urlRepository.save(any(Url.class))).thenThrow(new DataIntegrityViolationException("Unique constraint violation"));
+
+        ShortenUrlResponse response = shortenUrlUseCase.execute(command);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getId()).isEqualTo(88L);
+        assertThat(response.getOriginalUrl()).isEqualTo(originalUrl);
+        assertThat(response.getShortCode()).isEqualTo("otherThreadCode");
+
+        verify(urlRepository, times(2)).findByOriginalUrl(originalUrl);
+        verify(urlRepository, times(1)).save(any(Url.class));
     }
 }
