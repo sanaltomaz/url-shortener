@@ -7,6 +7,7 @@ import com.tom.url_shortener.url.application.usecase.ShortenUrlUseCase;
 import com.tom.url_shortener.url.infrastructure.http.dto.ShortenUrlRequest;
 import com.tom.url_shortener.url.infrastructure.http.dto.ShortenUrlResponseDto;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +25,7 @@ public class UrlController {
 
     @PostMapping("/api/urls")
     public ResponseEntity<ShortenUrlResponseDto> shortenUrl(
-            @RequestBody ShortenUrlRequest request,
+            @RequestBody @Valid ShortenUrlRequest request,
             HttpServletRequest servletRequest) {
 
         ShortenUrlCommand command = new ShortenUrlCommand(request.getUrl());

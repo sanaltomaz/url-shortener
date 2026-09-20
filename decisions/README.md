@@ -10,6 +10,7 @@ Este diretório documenta a evolução técnica, padrões arquiteturais e decis�
 | [**v2**](./v2-algoritmo-de-codificacao-base62.md) | Codificação de IDs com Base62 | **Aceito** | 2026-09-20 |
 | [**v3**](./v3-persistencia-relacional-e-integridade.md) | Persistência Relacional e Mapeamento de Entidades | **Aceito** | 2026-09-20 |
 | [**v4**](./v4-geracao-distribuida-de-ids-tsid-pre-persistencia.md) | Geração de ID Distribuído Pré-Persistência (TSID) e Eliminação do Duplo Round-Trip | **Aceito** | 2026-09-20 |
+| [**v5**](./v5-validacao-de-input-e-rfc7807.md) | Validação de Entrada de Dados e Padronização de Erros com RFC 7807 | **Aceito** | 2026-09-20 |
 
 ---
 
