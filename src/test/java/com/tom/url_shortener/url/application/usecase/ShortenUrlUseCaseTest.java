@@ -4,6 +4,7 @@ import com.tom.url_shortener.url.application.dto.ShortenUrlCommand;
 import com.tom.url_shortener.url.application.dto.ShortenUrlResponse;
 import com.tom.url_shortener.url.domain.IdGenerator;
 import com.tom.url_shortener.url.domain.Url;
+import com.tom.url_shortener.url.domain.UrlCacheRepository;
 import com.tom.url_shortener.url.domain.UrlRepository;
 import com.tom.url_shortener.url.infrastructure.utils.Base62;
 import org.junit.jupiter.api.DisplayName;
@@ -28,13 +29,16 @@ class ShortenUrlUseCaseTest {
     private UrlRepository urlRepository;
 
     @Mock
+    private UrlCacheRepository urlCacheRepository;
+
+    @Mock
     private IdGenerator idGenerator;
 
     @InjectMocks
     private ShortenUrlUseCase shortenUrlUseCase;
 
     @Test
-    @DisplayName("Deve retornar URL existente quando a URL original ja estiver cadastrada")
+    @DisplayName("Deve retornar URL existente e aquecer cache quando a URL original ja estiver cadastrada")
     void shouldReturnExistingUrlWhenAlreadyExists() {
         String originalUrl = "https://google.com";
         ShortenUrlCommand command = new ShortenUrlCommand(originalUrl);
@@ -54,12 +58,13 @@ class ShortenUrlUseCaseTest {
         assertThat(response.getShortCode()).isEqualTo("a");
 
         verify(urlRepository).findByOriginalUrl(originalUrl);
+        verify(urlCacheRepository).save("a", originalUrl);
         verify(urlRepository, never()).save(any());
         verifyNoInteractions(idGenerator);
     }
 
     @Test
-    @DisplayName("Deve gerar ID e shortCode pre-persistencia e salvar apenas uma vez")
+    @DisplayName("Deve gerar ID e shortCode pre-persistencia, salvar no banco e aquecer cache")
     void shouldCreateAndReturnNewUrlWhenNotExists() {
         String originalUrl = "https://github.com";
         ShortenUrlCommand command = new ShortenUrlCommand(originalUrl);
@@ -90,10 +95,11 @@ class ShortenUrlUseCaseTest {
                 url.getOriginalUrl().equals(originalUrl) &&
                 url.getShortCode().equals(expectedCode)
         ));
+        verify(urlCacheRepository).save(expectedCode, originalUrl);
     }
 
     @Test
-    @DisplayName("Deve recuperar registro existente quando ocorrer DataIntegrityViolationException por condicao de corrida")
+    @DisplayName("Deve recuperar registro existente e aquecer cache quando ocorrer DataIntegrityViolationException")
     void shouldRecoverExistingUrlWhenDataIntegrityViolationOccursDueToRaceCondition() {
         String originalUrl = "https://concurrent.com";
         ShortenUrlCommand command = new ShortenUrlCommand(originalUrl);
@@ -123,5 +129,6 @@ class ShortenUrlUseCaseTest {
 
         verify(urlRepository, times(2)).findByOriginalUrl(originalUrl);
         verify(urlRepository, times(1)).save(any(Url.class));
+        verify(urlCacheRepository).save("otherThreadCode", originalUrl);
     }
 }

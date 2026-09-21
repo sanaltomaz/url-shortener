@@ -13,6 +13,7 @@ Este diretório documenta a evolução técnica, padrões arquiteturais e decis�
 | [**v5**](./v5-validacao-de-input-e-rfc7807.md) | Validação de Entrada de Dados e Padronização de Erros com RFC 7807 | **Aceito** | 2026-09-20 |
 | [**v6**](./v6-resiliencia-a-condicao-de-corrida-url-duplicada.md) | Resiliência a Condições de Corrida em URLs Duplicadas | **Aceito** | 2026-09-20 |
 | [**v7**](./v7-estrategia-abrangente-de-testes.md) | Estratégia Abrangente de Testes Automatizados | **Aceito** | 2026-09-20 |
+| [**v8**](./v8-camada-de-cache-distribuido-redis-cache-aside.md) | Camada de Cache Distribuído com Redis (Cache-Aside) | **Aceito** | 2026-09-20 |
 
 ---
 
