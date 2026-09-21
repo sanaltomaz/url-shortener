@@ -1,4 +1,4 @@
-package com.tom.url_shortener.url.domain;
+package com.tom.url_shortener.url.application.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,14 +11,9 @@ import java.time.Instant;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Url {
-    private Long id;
+public class UrlStatsResponse {
     private String originalUrl;
     private String shortCode;
-
-    @Builder.Default
-    private Long clickCount = 0L;
-
-    @Builder.Default
-    private Instant createdAt = Instant.now();
+    private Long totalClicks;
+    private Instant createdAt;
 }

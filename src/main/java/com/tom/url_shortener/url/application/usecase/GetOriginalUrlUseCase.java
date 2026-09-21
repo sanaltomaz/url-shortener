@@ -3,8 +3,10 @@ package com.tom.url_shortener.url.application.usecase;
 import com.tom.url_shortener.url.domain.Url;
 import com.tom.url_shortener.url.domain.UrlCacheRepository;
 import com.tom.url_shortener.url.domain.UrlRepository;
+import com.tom.url_shortener.url.domain.event.UrlClickedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +19,7 @@ public class GetOriginalUrlUseCase {
 
     private final UrlRepository urlRepository;
     private final UrlCacheRepository urlCacheRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional(readOnly = true)
     public Optional<String> execute(String shortCode) {
@@ -24,18 +27,25 @@ public class GetOriginalUrlUseCase {
         Optional<String> cachedUrl = urlCacheRepository.findOriginalUrlByShortCode(shortCode);
         if (cachedUrl.isPresent()) {
             log.debug("Cache hit para shortCode: {}", shortCode);
+            eventPublisher.publishEvent(new UrlClickedEvent(shortCode));
             return cachedUrl;
         }
 
         log.debug("Cache miss para shortCode: {}. Buscando no banco de dados.", shortCode);
 
         // 2. Se houver miss, busca no repositório persistente (Postgres/H2)
-        return urlRepository.findByShortCode(shortCode)
+        Optional<String> dbUrl = urlRepository.findByShortCode(shortCode)
                 .map(Url::getOriginalUrl)
                 .map(originalUrl -> {
                     // 3. Salva no cache com TTL para aquecimento
                     urlCacheRepository.save(shortCode, originalUrl);
                     return originalUrl;
                 });
+
+        if (dbUrl.isPresent()) {
+            eventPublisher.publishEvent(new UrlClickedEvent(shortCode));
+        }
+
+        return dbUrl;
     }
 }

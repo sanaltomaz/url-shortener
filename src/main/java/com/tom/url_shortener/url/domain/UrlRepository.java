@@ -7,4 +7,5 @@ public interface UrlRepository {
     Optional<Url> findById(Long id);
     Optional<Url> findByShortCode(String shortCode);
     Optional<Url> findByOriginalUrl(String originalUrl);
+    void updateClickCount(String shortCode, long clickCount);
 }

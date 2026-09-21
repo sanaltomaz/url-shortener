@@ -2,7 +2,9 @@ package com.tom.url_shortener.url;
 
 import com.tom.url_shortener.url.application.dto.ShortenUrlCommand;
 import com.tom.url_shortener.url.application.dto.ShortenUrlResponse;
+import com.tom.url_shortener.url.application.dto.UrlStatsResponse;
 import com.tom.url_shortener.url.application.usecase.GetOriginalUrlUseCase;
+import com.tom.url_shortener.url.application.usecase.GetUrlStatsUseCase;
 import com.tom.url_shortener.url.application.usecase.ShortenUrlUseCase;
 import com.tom.url_shortener.url.infrastructure.persistence.repository.SpringDataUrlRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +36,9 @@ class ShortenUrlIntegrationTest {
     private GetOriginalUrlUseCase getOriginalUrlUseCase;
 
     @Autowired
+    private GetUrlStatsUseCase getUrlStatsUseCase;
+
+    @Autowired
     private SpringDataUrlRepository springDataUrlRepository;
 
     @BeforeEach
@@ -62,6 +67,14 @@ class ShortenUrlIntegrationTest {
         ShortenUrlResponse secondResponse = shortenUrlUseCase.execute(command);
         assertThat(secondResponse.getId()).isEqualTo(response.getId());
         assertThat(secondResponse.getShortCode()).isEqualTo(response.getShortCode());
+
+        // Consulta de estatísticas
+        Optional<UrlStatsResponse> stats = getUrlStatsUseCase.execute(response.getShortCode());
+        assertThat(stats).isPresent();
+        assertThat(stats.get().getOriginalUrl()).isEqualTo(originalUrl);
+        assertThat(stats.get().getShortCode()).isEqualTo(response.getShortCode());
+        assertThat(stats.get().getCreatedAt()).isNotNull();
+        assertThat(stats.get().getTotalClicks()).isGreaterThanOrEqualTo(0L);
     }
 
     @Test

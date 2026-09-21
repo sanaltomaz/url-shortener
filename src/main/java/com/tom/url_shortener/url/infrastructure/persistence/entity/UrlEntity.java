@@ -7,6 +7,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.domain.Persistable;
 
+import java.time.Instant;
+
 @Entity
 @Table(name = "tb_urls")
 @Data
@@ -23,6 +25,14 @@ public class UrlEntity implements Persistable<Long> {
 
     @Column(nullable = false, unique = true)
     private String shortCode;
+
+    @Column(nullable = false, updatable = false)
+    @Builder.Default
+    private Instant createdAt = Instant.now();
+
+    @Column(nullable = false)
+    @Builder.Default
+    private Long clickCount = 0L;
 
     @Transient
     @Builder.Default

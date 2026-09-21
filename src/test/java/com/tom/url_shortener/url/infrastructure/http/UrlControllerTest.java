@@ -2,7 +2,9 @@ package com.tom.url_shortener.url.infrastructure.http;
 
 import com.tom.url_shortener.url.application.dto.ShortenUrlCommand;
 import com.tom.url_shortener.url.application.dto.ShortenUrlResponse;
+import com.tom.url_shortener.url.application.dto.UrlStatsResponse;
 import com.tom.url_shortener.url.application.usecase.GetOriginalUrlUseCase;
+import com.tom.url_shortener.url.application.usecase.GetUrlStatsUseCase;
 import com.tom.url_shortener.url.application.usecase.ShortenUrlUseCase;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -35,6 +38,9 @@ class UrlControllerTest {
     @MockitoBean
     private GetOriginalUrlUseCase getOriginalUrlUseCase;
 
+    @MockitoBean
+    private GetUrlStatsUseCase getUrlStatsUseCase;
+
     @Test
     @DisplayName("Deve retornar 201 Created quando o payload contiver uma URL valida")
     void shouldReturn201WhenUrlIsValid() throws Exception {
@@ -52,7 +58,7 @@ class UrlControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/urls")
+        mockMvc.perform(post("/api/v1/urls")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonPayload))
                 .andExpect(status().isCreated())
@@ -139,6 +145,38 @@ class UrlControllerTest {
         when(getOriginalUrlUseCase.execute(shortCode)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/{shortCode}", shortCode))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("Deve retornar 200 OK com estatisticas no endpoint /api/v1/urls/{shortCode}/stats")
+    void shouldReturnStatsWhenShortCodeExists() throws Exception {
+        String shortCode = "statsCode";
+        UrlStatsResponse statsResponse = UrlStatsResponse.builder()
+                .originalUrl("https://example.com")
+                .shortCode(shortCode)
+                .totalClicks(42L)
+                .createdAt(Instant.parse("2026-09-20T20:00:00Z"))
+                .build();
+
+        when(getUrlStatsUseCase.execute(shortCode)).thenReturn(Optional.of(statsResponse));
+
+        mockMvc.perform(get("/api/v1/urls/{shortCode}/stats", shortCode))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.originalUrl").value("https://example.com"))
+                .andExpect(jsonPath("$.shortCode").value(shortCode))
+                .andExpect(jsonPath("$.totalClicks").value(42))
+                .andExpect(jsonPath("$.createdAt").value("2026-09-20T20:00:00Z"));
+    }
+
+    @Test
+    @DisplayName("Deve retornar 404 Not Found no endpoint de estatisticas quando shortCode nao existir")
+    void shouldReturn404OnStatsWhenShortCodeNotFound() throws Exception {
+        String shortCode = "nonexistent";
+
+        when(getUrlStatsUseCase.execute(shortCode)).thenReturn(Optional.empty());
+
+        mockMvc.perform(get("/api/v1/urls/{shortCode}/stats", shortCode))
                 .andExpect(status().isNotFound());
     }
 }

@@ -6,6 +6,7 @@ import com.tom.url_shortener.url.infrastructure.persistence.entity.UrlEntity;
 import com.tom.url_shortener.url.infrastructure.persistence.mapper.UrlEntityMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -39,5 +40,11 @@ public class UrlRepositoryImpl implements UrlRepository {
     public Optional<Url> findByOriginalUrl(String originalUrl) {
         return springDataUrlRepository.findByOriginalUrl(originalUrl)
                 .map(urlEntityMapper::toDomain);
+    }
+
+    @Override
+    @Transactional
+    public void updateClickCount(String shortCode, long clickCount) {
+        springDataUrlRepository.updateClickCount(shortCode, clickCount);
     }
 }
