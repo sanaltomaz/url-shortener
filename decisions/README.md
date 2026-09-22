@@ -16,6 +16,7 @@ Este diretório documenta a evolução técnica, padrões arquiteturais e decis�
 | [**v8**](./v8-camada-de-cache-distribuido-redis-cache-aside.md) | Camada de Cache Distribuído com Redis (Cache-Aside) | **Aceito** | 2026-09-20 |
 | [**v9**](./v9-metricas-assincronas-e-contagem-de-cliques.md) | Métricas Assíncronas e Contagem de Cliques com Redis INCR e Agregação | **Aceito** | 2026-09-21 |
 | [**v10**](./v10-versionamento-de-banco-de-dados-com-flyway.md) | Versionamento de Banco de Dados com Migrations (Flyway) | **Aceito** | 2026-09-21 |
+| [**v11**](./v11-perfis-de-configuracao-e-orquestracao-docker-compose.md) | Isolamento de Perfis de Configuração e Orquestração com Docker Compose | **Aceito** | 2026-09-21 |
 
 ---
 

@@ -1,29 +1,91 @@
-# URL Shortener with Caching and Metrics
+# Encurtador de URLs com Cache e Métricas
 
-> The focus of this project is high-speed reads with low latency, data integrity, and local execution simplicity.
+> O foco deste projeto são leituras de alta velocidade com baixa latência, integridade de dados e simplicidade de execução local.
 
-## 🎯 What to Build
+## 🎯 Objetivo do Projeto
 
-An API that takes a long URL, generates a unique short identifier (e.g., `app.io/aB3x9`), redirects incoming requests via HTTP status code `302` or `301`, and logs access metrics.
+Uma API que recebe uma URL longa, gera um identificador único encurtado (ex.: `app.io/aB3x9`), redireciona requisições via código de status HTTP `302` ou `301`, e registra métricas de acesso.
 
-## 💡 Real-World Problem It Solves
+## 💡 Problema Real que Resolve
 
-Shortening link length for easy sharing, masking tracking parameters, and measuring click engagement without degrading the response time of the primary redirect route.
+Redução do tamanho de links para fácil compartilhamento, mascaramento de parâmetros de rastreamento e medição de engajamento de cliques sem degradar o tempo de resposta da rota principal de redirecionamento.
 
-## 🛣️ Core Endpoints
+## 🚀 Como Instalar e Rodar
 
-- [x] `POST /api/v1/urls` — Generates the short code with format validation and optional expiration.
-- [x] `GET /{shortCode}` — Performs immediate redirection to the original URL.
-- [x] `GET /api/v1/urls/{shortCode}/stats` — Returns total clicks, referrers, and peak traffic times.
+### Pré-requisitos
+- [Docker](https://docs.docker.com/get-docker/) e [Docker Compose](https://docs.docker.com/compose/)
+- *(Opcional para rodar sem container)*: Java 21+ e Maven 3.9+
 
-## 🛠️ Key Concepts & Practices
+---
 
-- [x] **Encoding Algorithm:** Base62 conversion from numeric IDs (avoids MD5/SHA256 hash collisions without unsafe truncation).
-- [x] **Caching Layer with Redis:** Key-value storage (`shortCode` &rarr; `originalUrl`) to serve redirects without querying the relational database on every request.
-- [x] **Asynchronous Metrics Handling:** Increments click counters without blocking the redirect response (using an in-memory counter, Redis `INCR`, or internal events).
-- [x] **Database Migrations:** Schema evolution and versioning with Flyway, using `validate` strategy on Hibernate.
-- [ ] **Containerization:** `docker-compose.yml` containing the application, relational database (PostgreSQL/MySQL), and Redis configured with health checks.
+### Opção 1: Rodando 100% via Docker (Recomendado)
 
-## 📚 Architectural Decisions
+Sobe toda a stack (PostgreSQL, Redis e aplicação Spring Boot) orquestrada com health checks:
 
-See [decisions/README.md](./decisions/README.md) for ADRs and technical specifications (v1 to v10).
+1. **(Opcional) Configurar variáveis de porta**:
+   Caso sua máquina host já utilize as portas padrão (`5432` ou `6379`), copie o arquivo de exemplo e customize:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. **Iniciar os serviços**:
+   ```bash
+   docker compose up --build -d
+   ```
+
+3. **Acompanhar os logs**:
+   ```bash
+   docker compose logs -f app
+   ```
+
+4. **Encerrar a stack**:
+   ```bash
+   docker compose down
+   ```
+
+---
+
+### Opção 2: Rodando a aplicação localmente (com dependências no Docker)
+
+Caso prefira rodar a aplicação Spring Boot pelo terminal ou IDE e usar apenas o PostgreSQL e o Redis em containers:
+
+1. **Subir apenas Postgres e Redis**:
+   ```bash
+   docker compose up -d postgres redis
+   ```
+
+2. **Executar a aplicação**:
+   ```bash
+   ./mvnw spring-boot:run
+   ```
+   *(O perfil `dev` é ativado por padrão, conectando-se a `localhost:5432` e `localhost:6379`).*
+
+---
+
+### Opção 3: Executar a suíte de testes automatizados
+
+Os testes rodam isolados utilizando banco H2 em memória e o perfil `test`, sem necessidade de containers ativos:
+
+```bash
+./mvnw clean test
+```
+
+---
+
+## 🛠️ Endpoints Principais
+
+- [x] `POST /api/v1/urls` — Gera o código encurtado com validação de formato e tamanho.
+- [x] `GET /{shortCode}` — Realiza o redirecionamento imediato (`302 Found`) para a URL original.
+- [x] `GET /api/v1/urls/{shortCode}/stats` — Retorna estatísticas de acesso e total de cliques.
+
+## 🛠️ Conceitos e Práticas-Chave
+
+- [x] **Algoritmo de Codificação:** Conversão de IDs numéricos distribuídos (TSID) em Base62 (evita colisões de hash MD5/SHA256 sem truncamento inseguro).
+- [x] **Camada de Cache com Redis:** Armazenamento chave-valor (`shortCode` &rarr; `originalUrl`) via padrão Cache-Aside para servir redirecionamentos sem consultar o banco relacional a cada requisição.
+- [x] **Métricas Assíncronas:** Incremento atômico de acessos via Redis `INCR` e publicação assíncrona de eventos (`@Async`), sincronizados periodicamente para a base de dados relacional.
+- [x] **Migrations de Banco de Dados:** Evolução e versionamento de schema com Flyway, utilizando estratégia `validate` no Hibernate.
+- [x] **Conteinerização e Perfis:** `docker-compose.yaml` contendo a aplicação, PostgreSQL e Redis configurados com health checks e isolamento estrito de perfis (`test` vs `dev`).
+
+## 📚 Decisões de Arquitetura (ADRs)
+
+Consulte [decisions/README.md](./decisions/README.md) para detalhes técnicos e justificativas arquiteturais (v1 a v11).
