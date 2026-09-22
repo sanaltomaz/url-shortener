@@ -10,7 +10,7 @@ import org.springframework.data.domain.Persistable;
 import java.time.Instant;
 
 @Entity
-@Table(name = "tb_urls")
+@Table(name = "urls")
 @Data
 @Builder
 @NoArgsConstructor

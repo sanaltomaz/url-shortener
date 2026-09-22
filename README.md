@@ -21,8 +21,9 @@ Shortening link length for easy sharing, masking tracking parameters, and measur
 - [x] **Encoding Algorithm:** Base62 conversion from numeric IDs (avoids MD5/SHA256 hash collisions without unsafe truncation).
 - [x] **Caching Layer with Redis:** Key-value storage (`shortCode` &rarr; `originalUrl`) to serve redirects without querying the relational database on every request.
 - [x] **Asynchronous Metrics Handling:** Increments click counters without blocking the redirect response (using an in-memory counter, Redis `INCR`, or internal events).
+- [x] **Database Migrations:** Schema evolution and versioning with Flyway, using `validate` strategy on Hibernate.
 - [ ] **Containerization:** `docker-compose.yml` containing the application, relational database (PostgreSQL/MySQL), and Redis configured with health checks.
 
 ## 📚 Architectural Decisions
 
-See [decisions/README.md](./decisions/README.md) for ADRs and technical specifications (v1 to v9).
+See [decisions/README.md](./decisions/README.md) for ADRs and technical specifications (v1 to v10).
