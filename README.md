@@ -1,91 +1,73 @@
-# Encurtador de URLs com Cache e Métricas
+# Encurtador de URLs com Cache Distribuído e Telemetria Assíncrona
 
-> O foco deste projeto são leituras de alta velocidade com baixa latência, integridade de dados e simplicidade de execução local.
+[![Java 21](https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)](https://openjdk.org/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1.1-6DB33F?style=for-the-badge&logo=spring&logoColor=white)](https://spring.io/projects/spring-boot)
+[![Redis](https://img.shields.io/badge/Redis-7-DC382D?style=for-the-badge&logo=redis&logoColor=white)](https://redis.io/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Docker](https://img.shields.io/badge/Docker_Compose-Pronto-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+[![Testes](https://img.shields.io/badge/Testes-61%20Aprovados-brightgreen?style=for-the-badge)]()
+[![ADRs](https://img.shields.io/badge/ADRs-11%20Documentadas-blueviolet?style=for-the-badge)](./decisions/README.md)
 
-## 🎯 Objetivo do Projeto
-
-Uma API que recebe uma URL longa, gera um identificador único encurtado (ex.: `app.io/aB3x9`), redireciona requisições via código de status HTTP `302` ou `301`, e registra métricas de acesso.
-
-## 💡 Problema Real que Resolve
-
-Redução do tamanho de links para fácil compartilhamento, mascaramento de parâmetros de rastreamento e medição de engajamento de cliques sem degradar o tempo de resposta da rota principal de redirecionamento.
-
-## 🚀 Como Instalar e Rodar
-
-### Pré-requisitos
-- [Docker](https://docs.docker.com/get-docker/) e [Docker Compose](https://docs.docker.com/compose/)
-- *(Opcional para rodar sem container)*: Java 21+ e Maven 3.9+
+> API de alto throughput para encurtamento de links e telemetria de cliques em tempo real, projetada com foco em leituras de baixíssima latência, integridade sob alta concorrência e tolerância a falhas.
 
 ---
 
-### Opção 1: Rodando 100% via Docker (Recomendado)
+## 🎯 Destaques do Projeto
 
-Sobe toda a stack (PostgreSQL, Redis e aplicação Spring Boot) orquestrada com health checks:
+- **Leituras em Sub-milissegundos:** Redirecionamento HTTP 302 servido via **Redis (Cache-Aside)** com fallback automático e transparente para o PostgreSQL caso o cluster de cache fique indisponível.
+- **Telemetria Assíncrona:** Incrementos atômicos (`INCR`) no Redis acionados por eventos assíncronos (`@Async`), consolidados periodicamente em lote no banco relacional via agendador (`@Scheduled`), evitando contenção de I/O na rota principal.
+- **Zero Round-Trips Duplos:** Identificadores temporais pré-gerados em memória via **TSID** e codificados em **Base62** bijetivo antes da persistência, necessitando de apenas um único `INSERT`.
+- **Resiliente a Concorrência:** Tratamento de colisões simultâneas de URLs duplicadas com constraint única e fallback idempotente (validado com suite de 20 threads paralelas).
+- **Ambiente Determinístico:** Versionamento de schema com **Flyway** (`validate`), 61 testes automatizados (unitários, integração e WebMvc) e orquestração completa via **Docker Compose**.
 
-1. **(Opcional) Configurar variáveis de porta**:
-   Caso sua máquina host já utilize as portas padrão (`5432` ou `6379`), copie o arquivo de exemplo e customize:
-   ```bash
-   cp .env.example .env
-   ```
-
-2. **Iniciar os serviços**:
-   ```bash
-   docker compose up --build -d
-   ```
-
-3. **Acompanhar os logs**:
-   ```bash
-   docker compose logs -f app
-   ```
-
-4. **Encerrar a stack**:
-   ```bash
-   docker compose down
-   ```
+👉 **[Visualizar Diagrama de Arquitetura e Fluxo de Dados (docs/architecture.md)](./docs/architecture.md)**
 
 ---
 
-### Opção 2: Rodando a aplicação localmente (com dependências no Docker)
+## 📡 Endpoints da API
 
-Caso prefira rodar a aplicação Spring Boot pelo terminal ou IDE e usar apenas o PostgreSQL e o Redis em containers:
+| Método | Rota | Descrição | Status |
+| :---: | :--- | :--- | :---: |
+| `POST` | `/api/v1/urls` | Encurta uma URL longa (validação de formato e tamanho) | `201 Created` |
+| `GET` | `/{shortCode}` | Redirecionamento imediato para a URL original | `302 Found` |
+| `GET` | `/api/v1/urls/{shortCode}/stats` | Estatísticas de acesso e total de cliques acumulados | `200 OK` |
 
-1. **Subir apenas Postgres e Redis**:
-   ```bash
-   docker compose up -d postgres redis
-   ```
-
-2. **Executar a aplicação**:
-   ```bash
-   ./mvnw spring-boot:run
-   ```
-   *(O perfil `dev` é ativado por padrão, conectando-se a `localhost:5432` e `localhost:6379`).*
+👉 **[Consulte a documentação completa dos endpoints com exemplos de cURL e RFC 7807 (docs/api.md)](./docs/api.md)**
 
 ---
-
-### Opção 3: Executar a suíte de testes automatizados
-
-Os testes rodam isolados utilizando banco H2 em memória e o perfil `test`, sem necessidade de containers ativos:
-
-```bash
-./mvnw clean test
-```
-
----
-
-## 🛠️ Endpoints Principais
-
-- [x] `POST /api/v1/urls` — Gera o código encurtado com validação de formato e tamanho.
-- [x] `GET /{shortCode}` — Realiza o redirecionamento imediato (`302 Found`) para a URL original.
-- [x] `GET /api/v1/urls/{shortCode}/stats` — Retorna estatísticas de acesso e total de cliques.
-
-## 🛠️ Conceitos e Práticas-Chave
-
-- [x] **Algoritmo de Codificação:** Conversão de IDs numéricos distribuídos (TSID) em Base62 (evita colisões de hash MD5/SHA256 sem truncamento inseguro).
-- [x] **Camada de Cache com Redis:** Armazenamento chave-valor (`shortCode` &rarr; `originalUrl`) via padrão Cache-Aside para servir redirecionamentos sem consultar o banco relacional a cada requisição.
-- [x] **Métricas Assíncronas:** Incremento atômico de acessos via Redis `INCR` e publicação assíncrona de eventos (`@Async`), sincronizados periodicamente para a base de dados relacional.
-- [x] **Migrations de Banco de Dados:** Evolução e versionamento de schema com Flyway, utilizando estratégia `validate` no Hibernate.
-- [x] **Conteinerização e Perfis:** `docker-compose.yaml` contendo a aplicação, PostgreSQL e Redis configurados com health checks e isolamento estrito de perfis (`test` vs `dev`).
 
 ## 📚 Decisões de Arquitetura (ADRs)
 
-Consulte [decisions/README.md](./decisions/README.md) para detalhes técnicos e justificativas arquiteturais (v1 a v11).
+Todas as 11 decisões técnicas, contextos e trade-offs adotados no projeto estão formalmente registrados:
+
+👉 **[Acessar o Índice Completo de ADRs (decisions/README.md)](./decisions/README.md)**
+
+| ADR | Decisão Chave | Motivo do Trade-off |
+| :---: | :--- | :--- |
+| [**v4**](./decisions/v4-geracao-distribuida-de-ids-tsid-pre-persistencia.md) | **TSID pré-persistência** | Evita múltiplos round-trips ao banco e elimina overhead de auto-increment. |
+| [**v6**](./decisions/v6-resiliencia-a-condicao-de-corrida-url-duplicada.md) | **Fallback idempotente** | Garante integridade em corrida sem travar o pool de conexões com lock distribuído. |
+| [**v8**](./decisions/v8-camada-de-cache-distribuido-redis-cache-aside.md) | **Cache-Aside Fail-Safe** | Permite leitura em sub-milissegundos com fallback seguro se o Redis falhar. |
+| [**v9**](./decisions/v9-metricas-assincronas-e-contagem-de-cliques.md) | **Telemetria `@Async` + Lote** | Não penaliza a rota de redirecionamento com escrita em disco. |
+| [**v10**](./decisions/v10-versionamento-de-banco-de-dados-com-flyway.md) | **Flyway (`validate`)** | Elimina DDL automático e assegura consistência entre ambientes. |
+
+---
+
+## 🚀 Como Executar
+
+### 1. Stack Completa via Docker Compose (Recomendado)
+Sobe aplicação, PostgreSQL 17 e Redis 7 com health checks:
+```bash
+docker compose up --build -d
+```
+
+### 2. Rodando Localmente com Dependências no Docker
+```bash
+docker compose up -d postgres redis
+./mvnw spring-boot:run
+```
+
+### 3. Suíte de Testes Automatizados (61 testes)
+Os testes rodam isolados com perfil `test` e banco H2 em memória:
+```bash
+./mvnw clean test
+```
